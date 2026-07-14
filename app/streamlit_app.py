@@ -105,7 +105,7 @@ st.markdown('<div class="title-gradient">JoSAA ML College Predictor</div>', unsa
 st.markdown('<div class="subtitle">Machine Learning-Based Choice Recommendation and Cutoff Predictor</div>', unsafe_allow_html=True)
 
 # API Endpoint definition
-API_URL = "http://localhost:8000"
+API_URL = "https://jossa-clg-predictor.onrender.com"
 
 # Sidebar controls
 st.sidebar.markdown("### 👤 Candidate Profile")
