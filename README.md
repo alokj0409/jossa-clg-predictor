@@ -1,4 +1,4 @@
-# JoSAA ML-Based College Predictor (Resume Edition)
+# JoSAA ML-Based College Predictor 
 
 A high-performance machine learning pipeline and interactive dashboard that predicts JoSAA (Joint Seat Allocation Authority) seat allotment outcomes using 6 years of historical data (2020-2025).
 
