@@ -3,6 +3,16 @@ import requests
 import pandas as pd
 import json
 
+# Load NIRF data
+@st.cache_data
+def load_nirf_data():
+    try:
+        return pd.read_csv("data/nirf_2024.csv")
+    except Exception:
+        return pd.DataFrame(columns=["Institute Name", "NIRF Rank"])
+
+nirf_df = load_nirf_data()
+
 # Setup page config
 st.set_page_config(
     page_title="JoSAA ML College Predictor",
@@ -104,8 +114,9 @@ st.markdown("""
 st.markdown('<div class="title-gradient">JoSAA ML College Predictor</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Machine Learning-Based Choice Recommendation and Cutoff Predictor</div>', unsafe_allow_html=True)
 
-# API Endpoint definition
-API_URL = "https://jossa-clg-predictor.onrender.com"
+# API Endpoint definition - gets URL from environment variables, falls back to localhost
+import os
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 # Sidebar controls
 st.sidebar.markdown("### 👤 Candidate Profile")
@@ -250,9 +261,32 @@ if st.sidebar.button("🔮 Predict Admissions", use_container_width=True):
                             '2025 Closing Rank', 'Predicted Closing Rank', 'Admission Chance'
                         ]
                         
+                        # Merge NIRF data
+                        df = df.merge(nirf_df, on='Institute Name', how='left')
+                        df['NIRF Rank'] = df['NIRF Rank'].fillna(999).astype(int)
+                        
+                        # Keep numeric chance for sorting
+                        df['Admission Chance Num'] = df['Admission Chance']
                         # Format percentage
                         df['Admission Chance'] = df['Admission Chance'].map(lambda x: f"{x * 100:.1f}%")
-                        return df
+                        
+                        # Reorder with NIRF Rank
+                        cols = ['Institute Name', 'NIRF Rank', 'Branch / Program', 'Quota', '2025 Closing Rank', 'Predicted Closing Rank', 'Admission Chance', 'Admission Chance Num']
+                        return df[cols]
+                        
+                    def apply_sort_and_format(df, sort_option):
+                        if df is None: return None
+                        if "NIRF Rank" in sort_option:
+                            df = df.sort_values(by=['NIRF Rank', '2025 Closing Rank'], ascending=[True, True])
+                        elif "Closing Rank" in sort_option:
+                            df = df.sort_values(by=['2025 Closing Rank'], ascending=[True])
+                        else:
+                            df = df.sort_values(by=['Admission Chance Num'], ascending=[False])
+                            
+                        # Format NIRF rank for display
+                        df['NIRF Rank'] = df['NIRF Rank'].apply(lambda x: f"⭐ {x}" if x <= 50 else (str(x) if x < 999 else "-"))
+                        return df.drop(columns=['Admission Chance Num'])
+
 
                     # Active filter summary shown above tabs
                     filter_labels = []
@@ -263,10 +297,15 @@ if st.sidebar.button("🔮 Predict Admissions", use_container_width=True):
                     if filter_labels:
                         st.info('  •  '.join(filter_labels))
                     
+                    # Sort Options
+                    st.markdown("---")
+                    sort_option = st.radio("Sort Results By:", ["Default (Admission Chance)", "NIRF Rank (Top Colleges First)", "Closing Rank (Toughest First)"], horizontal=True)
+
                     with tab1:
                         st.markdown("### Safe Colleges")
                         st.write("These choices have a **high probability (80%+)** of admission based on historical closing ranks and ML forecasting.")
                         df_safe = format_results_df(data['safe'])
+                        df_safe = apply_sort_and_format(df_safe, sort_option)
                         if df_safe is not None:
                             st.dataframe(df_safe, use_container_width=True, hide_index=True)
                         else:
@@ -276,6 +315,7 @@ if st.sidebar.button("🔮 Predict Admissions", use_container_width=True):
                         st.markdown("### Reach Colleges")
                         st.write("These choices have a **moderate probability (30% - 80%)** of admission. Highly recommended to place these in your choice list.")
                         df_reach = format_results_df(data['reach'])
+                        df_reach = apply_sort_and_format(df_reach, sort_option)
                         if df_reach is not None:
                             st.dataframe(df_reach, use_container_width=True, hide_index=True)
                         else:
@@ -285,6 +325,7 @@ if st.sidebar.button("🔮 Predict Admissions", use_container_width=True):
                         st.markdown("### Dream Colleges")
                         st.write("These choices are competitive but have a **slight probability (2% - 30%)** of admission. Worth adding to the top of your choice list.")
                         df_dream = format_results_df(data['dream'])
+                        df_dream = apply_sort_and_format(df_dream, sort_option)
                         if df_dream is not None:
                             st.dataframe(df_dream, use_container_width=True, hide_index=True)
                         else:

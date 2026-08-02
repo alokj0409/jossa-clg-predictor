@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 import pickle
 from xgboost import XGBRegressor, XGBClassifier
-from sklearn.metrics import mean_absolute_error, r2_score, roc_auc_score, classification_report
+from sklearn.metrics import mean_absolute_error, r2_score, roc_auc_score, classification_report,accuracy_score
+
+
 
 def train_and_save_models(data_dir, models_dir):
     os.makedirs(models_dir, exist_ok=True)
@@ -100,6 +102,8 @@ def train_and_save_models(data_dir, models_dir):
     
     iit_reg = XGBRegressor(n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42)
     iit_reg.fit(X_train_iit_reg, y_train_iit_reg)
+
+    
     
     # Eval IIT Regressor
     preds = iit_reg.predict(X_test_iit_reg)
@@ -172,6 +176,11 @@ def train_and_save_models(data_dir, models_dir):
         pickle.dump(non_iit_clf, f)
         
     print("All models successfully saved!")
+    print("\n--- Final Model Metrics ---")
+    print(f"IIT Regressor    -> R²: {r2_score(y_test_iit_reg, iit_reg.predict(X_test_iit_reg)):.4f}, MAE: {mean_absolute_error(y_test_iit_reg, iit_reg.predict(X_test_iit_reg)):.2f}")
+    print(f"IIT Classifier   -> Accuracy: {accuracy_score(y_test_iit_clf, iit_clf.predict(X_test_iit_clf)):.4f}")
+    print(f"Non-IIT Regressor -> R²: {r2_score(y_test_non_iit_reg, non_iit_reg.predict(X_test_non_iit_reg)):.4f}, MAE: {mean_absolute_error(y_test_non_iit_reg, non_iit_reg.predict(X_test_non_iit_reg)):.2f}")
+    print(f"Non-IIT Classifier -> Accuracy: {accuracy_score(y_test_non_iit_clf, non_iit_clf.predict(X_test_non_iit_clf)):.4f}")
 
 if __name__ == '__main__':
     train_and_save_models(r"d:\jeerankpred\data\processed", r"d:\jeerankpred\models")
